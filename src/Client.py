@@ -1,8 +1,10 @@
 import os
 from google import genai
 from Functions import CallOuts
-from google.genai.types import GenerateContentConfig, Part
+from google.genai.types import GenerateContentConfig, Part, Outcome
 
+
+RAG = "from the following context: {context}, answer the following question {message}"
 
 
 class Client :
@@ -13,6 +15,8 @@ class Client :
 		PROJECT = os.environ.get("PROJECT_ID")
 		LOCATION = os.environ.get("GOOGLE_CLOUD_REGION")
 
+		print(RAG.format(context="alex is a developer", message="who is alex"))
+
 
 		self.client = genai.Client(vertexai=True, project=PROJECT, location=LOCATION)
 
@@ -21,10 +25,9 @@ class Client :
 			config=GenerateContentConfig(
 			temperature=0,
 			tools=[CallOuts],
-			#system_instruction="Only use functions if available, otherwise just skip the tools and answer the question using a temperature of 1.0.",
+			system_instruction="Use functions if available, otherwise just skip the tools and answer the question using a temperature of 1.0",
     		)
 		)
-
 
 
 	def prompt(self, message:str) -> str :
@@ -42,7 +45,9 @@ class Client :
 					response = self.chat.send_message(Part.from_function_response(name=name,response={"content": content}))
 
 		else :
-			print("Use default response")
+			print()
+			print("Using default response")
+			response = self.chat.send_message(RAG.format(context="alex is a developer", message=message))
 
 		return(response.candidates[0].content.parts[0].text)
 

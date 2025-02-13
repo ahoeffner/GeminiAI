@@ -1,3 +1,4 @@
-IPython
 google-genai
 python-dotenv
+langchain_chroma
+langchain-community
