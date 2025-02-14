@@ -53,7 +53,7 @@ class VectorDB :
 	def createCorpus() :
 		text = "This is the text I want to embed."
 		model = TextEmbeddingModel.from_pretrained("textembedding-gecko@001")
-		embedding = model.embed(text=text).embedding
+		embedding = model.get_embeddings([text])
 		print(embedding)
 
 		#datapoint = aiplatform.gapic.IndexDatapoint(
