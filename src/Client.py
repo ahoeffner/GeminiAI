@@ -1,7 +1,7 @@
 import os
 from google import genai
 from Functions import CallOuts
-from google.genai.types import GenerateContentConfig, Part, Outcome
+from google.genai.types import GenerateContentConfig, Part
 
 
 RAG = "from the following context: {context}, answer the following question {message}"
@@ -13,12 +13,9 @@ class Client :
 
 		MODEL = os.environ.get("MODEL")
 		PROJECT = os.environ.get("PROJECT_ID")
-		LOCATION = os.environ.get("GOOGLE_CLOUD_REGION")
+		GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
 
-		print(RAG.format(context="alex is a developer", message="who is alex"))
-
-
-		self.client = genai.Client(vertexai=True, project=PROJECT, location=LOCATION)
+		self.client = genai.Client(vertexai=True, project=PROJECT, location=GCREGION)
 
 		self.chat = self.client.chats.create(
 			model=MODEL,

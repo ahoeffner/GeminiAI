@@ -1,4 +1,6 @@
+pypdf
+vertexai
 google-genai
 python-dotenv
-langchain_chroma
 langchain-community
+google-cloud-aiplatform

@@ -1,6 +1,5 @@
 from Client import Client
 from dotenv import load_dotenv
-from IPython.display import Markdown, display
 
 load_dotenv()
 
