@@ -19,9 +19,11 @@ def main() :
 
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
+	VectorDB.test("Goodbye and thank you for all the fish")
+
 	#VectorDB.create()
-	VectorDB.connect()
-	VectorDB.createCorpus()
+	#VectorDB.connect()
+	#VectorDB.getEmbeddings(["Banana"])
 
 	#for file in os.listdir(DOCUMENTS) :
 		#print("1 file: "+file)

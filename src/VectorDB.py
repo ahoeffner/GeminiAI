@@ -1,9 +1,10 @@
 from vertexai.preview import rag
 from google.cloud import aiplatform
+from nltk.tokenize import sent_tokenize
 from langchain.schema.document import Document
-from vertexai.language_models import TextEmbeddingModel
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
 
 class VectorDB :
@@ -12,7 +13,6 @@ class VectorDB :
 
 	index = None
 	endpoint = None
-	corpus = None
 	vectordb = None
 
 
@@ -50,18 +50,21 @@ class VectorDB :
 		VectorDB.vectordb = rag.VertexVectorSearch(VectorDB.ENDPOINT,"VectorDB")
 
 
-	def createCorpus() :
-		text = "This is the text I want to embed."
-		model = TextEmbeddingModel.from_pretrained("textembedding-gecko@001")
-		embedding = model.get_embeddings([text])
-		print(embedding)
+	def getEmbeddings(text:list[str]) :
+		model = TextEmbeddingModel.from_pretrained("textembedding-gecko-multilingual@001")
+		embedding = model.get_embeddings(text)
+		return(embedding)
 
-		#datapoint = aiplatform.gapic.IndexDatapoint(
-		#	deployed_index_id=VectorDB.INDEX,  # Important: Deployed index ID
-		#	datapoint_id="file_name,chunk",  # Unique ID within the deployed index
-		#	embedding=embedding,
-		#	metadata={"text": "content"},
-		#)
+
+	def store(path:str, metadata, embedding:list[TextEmbedding]) :
+		datapoint = aiplatform.gapic.IndexDatapoint(
+			deployed_index_id=VectorDB.INDEX,
+			datapoint_id=path,  # Unique ID within the deployed index
+			embedding=embedding,
+			metadata=metadata,
+		)
+
+		print(datapoint)
 
 		#aiplatform.MatchingEngineIndex.upsert_datapoints(VectorDB.index, datapoints=[datapoint])
 		#VectorDB.index.upsert_datapoints()
@@ -97,5 +100,14 @@ class VectorDB :
 		return(splitter.split(docs))
 
 
-	def embedding() :
-		return(TextEmbeddingModel.from_pretrained("text-embedding-005"))
+	def splitText(docs:list[Document]) :
+		tokenizer = TextEmbeddingModel.from_pretrained("textembedding-gecko-multilingual@001")
+		text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
+			tokenizer,
+			chunk_size=3000,
+			chunk_overlap=256)
+		return(text_splitter.split_documents(docs))
+
+
+	def test(text:str) :
+		pass

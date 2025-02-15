@@ -26,7 +26,6 @@ class Client :
     		)
 		)
 
-
 	def prompt(self, message:str) -> str :
 		# who is obama
 		# list the file Client.py from alex's mac
