@@ -74,9 +74,25 @@ class VectorDB :
 
 
 	def load(doc:Document) :
-		doc.metadata["alex"] = "ALEX"
-		print(f"Storing {doc.metadata.get("alex")} {doc.metadata.get("source")} bytes: {len(doc.page_content)}")
-		VectorDB.splitText(doc)
+		print(f"Storing {doc.metadata.get("source")} bytes: {len(doc.page_content)}")
+
+		path = doc.metadata.get("source")
+		chunks = VectorDB.splitText(doc)
+
+		count = len(chunks)
+		doc.metadata["chunks"] = count
+
+		for i in range(0,count)	:
+			doc.metadata["chunk"] = i
+
+			id = path + "[" + str(i) + "]"
+			text = VectorDB.concat(chunks[i])
+			embeddings = VectorDB.getEmbeddings(chunks[i])
+
+			print(id,embeddings[0])
+
+		print("done")
+
 
 
 	def loadPDF(path) :
@@ -118,39 +134,18 @@ class VectorDB :
 				chunk = []
 
 			ssize = len(sentences[s])
-			chunk.append({"text": sentences[s], "size": ssize})
+			chunk.append(sentences[s])
 			csize += ssize
 
 		return(chunks)
 
 
-	def splitTextOLD(doc:Document) :
-		chunks = []
-		sentences = []
-		parts = sent_tokenize(doc.page_content)
+	def concat(chunks:list[str]) :
+		text = ""
+		count = len(chunks)
 
-		count = len(parts)
-		print(f"sentences: {len(parts)}")
+		for i in range(0,count) :
+			if (i > 0) : text += ""
+			text += chunks[i]
 
-		for s in range(0,count) :
-			parts[s] = parts[s].strip(" .;:?!")
-			if (len(parts[s]) > 3) : sentences.append(parts[s])
-
-		chunk = ""
-		count = len(sentences)
-
-		for s in range(0,count) :
-			if (len(chunk) + len(sentences[s]) > CHUNK) :
-				chunks.append(chunk)
-
-				half = int(CHUNK/2)
-				chunk = chunk[half:]
-				chunk = "".join(chunk.split(" ",1))
-
-			chunk = chunk+sentences[s]+" "
-
-		for s in range(0,1) :
-			print(f"----------------{s}-----------------")
-			print(chunks[s])
-			print()
-			print()
+		return(text)
