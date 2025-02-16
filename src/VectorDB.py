@@ -3,9 +3,10 @@ from google.cloud import aiplatform
 from nltk.tokenize import sent_tokenize
 from langchain.schema.document import Document
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
+
+CHUNK = 3072
 
 class VectorDB :
 	INDEX="projects/418382099622/locations/us-central1/indexes/6871855314623266816"
@@ -15,9 +16,8 @@ class VectorDB :
 	endpoint = None
 	vectordb = None
 
-
 	def create() :
-		index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
+		VectorDB.index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
 			display_name="VectorDB",
 			description="Vector database to hold document embeddings",
 			dimensions=768,
@@ -29,19 +29,16 @@ class VectorDB :
 			index_update_method="STREAM_UPDATE",
 		)
 
-		endpoint = aiplatform.MatchingEngineIndexEndpoint.create(
+		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint.create(
  	   	display_name="VectorDB", public_endpoint_enabled=True
 		)
 
-		endpoint.deploy_index(
-    		index=index, deployed_index_id="VectorDB"
+		VectorDB.endpoint.deploy_index(
+    		index=VectorDB.index, deployed_index_id="VectorDB"
 		)
 
-		VectorDB.ENDPOINT = index.resource_name
-
-		#corpus = rag.create_corpus("VectorDB", index=index, endpoint=endpoint)
-
-		print("Created VectorDB "+index.resource_name+" "+endpoint.resource_name)
+		VectorDB.ENDPOINT = VectorDB.index.resource_name
+		print("Created VectorDB "+VectorDB.index.resource_name+" "+VectorDB.endpoint.resource_name)
 
 
 	def connect() :
@@ -56,10 +53,10 @@ class VectorDB :
 		return(embedding)
 
 
-	def store(path:str, metadata, embedding:list[TextEmbedding]) :
+	def store(id:str, metadata, embedding:list[TextEmbedding]) :
 		datapoint = aiplatform.gapic.IndexDatapoint(
 			deployed_index_id=VectorDB.INDEX,
-			datapoint_id=path,  # Unique ID within the deployed index
+			datapoint_id=id,  # Unique ID within the deployed index
 			embedding=embedding,
 			metadata=metadata,
 		)
@@ -77,7 +74,9 @@ class VectorDB :
 
 
 	def load(doc:Document) :
-		print("Storing ",doc.metadata, len(doc.page_content))
+		doc.metadata["alex"] = "ALEX"
+		print(f"Storing {doc.metadata.get("alex")} {doc.metadata.get("source")} bytes: {len(doc.page_content)}")
+		VectorDB.splitText(doc)
 
 
 	def loadPDF(path) :
@@ -95,19 +94,63 @@ class VectorDB :
 		return(VectorDB.load(doc))
 
 
-	def splitText(docs:list[Document]) :
-		splitter = RecursiveCharacterTextSplitter()
-		return(splitter.split(docs))
+	def splitText(doc:Document) :
+		chunks = []
+		sentences = []
+		parts = sent_tokenize(doc.page_content)
+
+		count = len(parts)
+
+		for s in range(0,count) : # Clean up
+			parts[s] = "".join(parts[s].strip(" .;:?!"))
+			if (len(parts[s]) > 0) :
+				if (len(parts[s]) > 1 or len(parts[s][0]) > 1) :
+					sentences.append(parts[s])
+
+		csize = 0
+		chunk = []
+		count = len(sentences)
+
+		for s in range(0,count) :
+			if (csize + len(sentences[s]) > CHUNK) :
+				chunks.append(chunk)
+				csize = 0
+				chunk = []
+
+			ssize = len(sentences[s])
+			chunk.append({"text": sentences[s], "size": ssize})
+			csize += ssize
+
+		return(chunks)
 
 
-	def splitText(docs:list[Document]) :
-		tokenizer = TextEmbeddingModel.from_pretrained("textembedding-gecko-multilingual@001")
-		text_splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-			tokenizer,
-			chunk_size=3000,
-			chunk_overlap=256)
-		return(text_splitter.split_documents(docs))
+	def splitTextOLD(doc:Document) :
+		chunks = []
+		sentences = []
+		parts = sent_tokenize(doc.page_content)
 
+		count = len(parts)
+		print(f"sentences: {len(parts)}")
 
-	def test(text:str) :
-		pass
+		for s in range(0,count) :
+			parts[s] = parts[s].strip(" .;:?!")
+			if (len(parts[s]) > 3) : sentences.append(parts[s])
+
+		chunk = ""
+		count = len(sentences)
+
+		for s in range(0,count) :
+			if (len(chunk) + len(sentences[s]) > CHUNK) :
+				chunks.append(chunk)
+
+				half = int(CHUNK/2)
+				chunk = chunk[half:]
+				chunk = "".join(chunk.split(" ",1))
+
+			chunk = chunk+sentences[s]+" "
+
+		for s in range(0,1) :
+			print(f"----------------{s}-----------------")
+			print(chunks[s])
+			print()
+			print()

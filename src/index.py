@@ -1,9 +1,9 @@
 import os
+import nltk
 
 from VectorDB import VectorDB
 from dotenv import load_dotenv
 from google.cloud import aiplatform
-from vertexai.language_models import TextEmbeddingModel
 
 
 DOCUMENTS = "../documents/"
@@ -17,17 +17,18 @@ def main() :
 	PROJECT = os.environ.get("PROJECT_ID")
 	GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
 
+	nltk.data.path = [os.environ.get("NLTK_PATH")]
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
-	VectorDB.test("Goodbye and thank you for all the fish")
+	#VectorDB.test("Goodbye and thank you for all the fish")
 
 	#VectorDB.create()
 	#VectorDB.connect()
 	#VectorDB.getEmbeddings(["Banana"])
 
-	#for file in os.listdir(DOCUMENTS) :
-		#print("1 file: "+file)
-		#VectorDB.loadPDF(DOCUMENTS+file)
+	for file in os.listdir(DOCUMENTS) :
+		print("file: "+file)
+		VectorDB.loadPDF(DOCUMENTS+file)
 
 	print("Done")
 
