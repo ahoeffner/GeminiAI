@@ -20,11 +20,7 @@ def main() :
 	nltk.data.path = [os.environ.get("NLTK_PATH")]
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
-	#VectorDB.test("Goodbye and thank you for all the fish")
-
-	#VectorDB.create()
-	#VectorDB.connect()
-	#VectorDB.getEmbeddings(["Banana"])
+	VectorDB.connect()
 
 	for file in os.listdir(DOCUMENTS) :
 		print("file: "+file)

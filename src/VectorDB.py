@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+
 from vertexai.preview import rag
 from google.cloud import aiplatform
 from nltk.tokenize import sent_tokenize
@@ -7,11 +10,11 @@ from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
 
 CHUNK = 3072
+INDEX = os.environ.get("INDEX")
+ENDPOINT = os.environ.get("ENDPOINT")
+
 
 class VectorDB :
-	INDEX="projects/418382099622/locations/us-central1/indexes/6871855314623266816"
-	ENDPOINT = "projects/418382099622/locations/us-central1/indexEndpoints/2872131079936933888"
-
 	index = None
 	endpoint = None
 	vectordb = None
@@ -37,14 +40,20 @@ class VectorDB :
     		index=VectorDB.index, deployed_index_id="VectorDB"
 		)
 
-		VectorDB.ENDPOINT = VectorDB.index.resource_name
-		print("Created VectorDB "+VectorDB.index.resource_name+" "+VectorDB.endpoint.resource_name)
+		INDEX = VectorDB.index.resource_name
+		ENDPOINT = VectorDB.endpoint.resource_name
+
+		print("Created VectorDB "+INDEX+" "+ENDPOINT)
 
 
 	def connect() :
-		VectorDB.index = aiplatform.MatchingEngineIndex(VectorDB.INDEX)
-		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(VectorDB.ENDPOINT)
-		VectorDB.vectordb = rag.VertexVectorSearch(VectorDB.ENDPOINT,"VectorDB")
+		INDEX = os.environ.get("INDEX")
+		ENDPOINT = os.environ.get("ENDPOINT")
+
+		print(f"---------- {INDEX} ---------")
+		VectorDB.index = aiplatform.MatchingEngineIndex(INDEX)
+		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(ENDPOINT)
+		VectorDB.vectordb = rag.VertexVectorSearch(ENDPOINT,"VectorDB")
 
 
 	def getEmbeddings(text:list[str]) :
@@ -54,8 +63,20 @@ class VectorDB :
 
 
 	def store(id:str, metadata, embedding:list[TextEmbedding]) :
+		text = "Hello and thank you for all the fish";
+		embeddings = VectorDB.getEmbeddings([text])
+
+		index_datapoint = aiplatform.gapic.IndexDatapoint(
+			deployed_index_id=INDEX,  # Important: Deployed index ID
+			datapoint_id="xx",  # Unique ID within the deployed index
+			embedding=embedding,
+			metadata={"text": text},
+		)
+
+		return
+
 		datapoint = aiplatform.gapic.IndexDatapoint(
-			deployed_index_id=VectorDB.INDEX,
+			deployed_index_id=INDEX,
 			datapoint_id=id,  # Unique ID within the deployed index
 			embedding=embedding,
 			metadata=metadata,
@@ -84,14 +105,9 @@ class VectorDB :
 
 		for i in range(0,count)	:
 			doc.metadata["chunk"] = i
-
 			id = path + "[" + str(i) + "]"
-			text = VectorDB.concat(chunks[i])
-			embeddings = VectorDB.getEmbeddings(chunks[i])
-
-			print(id,embeddings[0])
-
-		print("done")
+			doc.page_content = VectorDB.concat(chunks[i])
+			VectorDB.store(id,doc.metadata,VectorDB.getEmbeddings(chunks[i]))
 
 
 
