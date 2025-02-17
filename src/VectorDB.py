@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 from vertexai.preview import rag
-from google.cloud import aiplatform
+from google.cloud import aiplatform, aiplatform_v1
 from nltk.tokenize import sent_tokenize
 from langchain.schema.document import Document
 from langchain_community.document_loaders import PyPDFLoader
@@ -15,9 +15,9 @@ ENDPOINT = os.environ.get("ENDPOINT")
 
 
 class VectorDB :
-	index = None
-	endpoint = None
-	vectordb = None
+	index:aiplatform.MatchingEngineIndex = None
+	vectordb:aiplatform.MatchingEngineIndex = None
+	endpoint:aiplatform.MatchingEngineIndexEndpoint = None
 
 	def create() :
 		VectorDB.index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
@@ -49,49 +49,51 @@ class VectorDB :
 	def connect() :
 		INDEX = os.environ.get("INDEX")
 		ENDPOINT = os.environ.get("ENDPOINT")
-
-		print(f"---------- {INDEX} ---------")
 		VectorDB.index = aiplatform.MatchingEngineIndex(INDEX)
 		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(ENDPOINT)
 		VectorDB.vectordb = rag.VertexVectorSearch(ENDPOINT,"VectorDB")
 
 
-	def getEmbeddings(text:list[str]) :
-		model = TextEmbeddingModel.from_pretrained("textembedding-gecko-multilingual@001")
-		embedding = model.get_embeddings(text)
-		return(embedding)
+	def query(text:str) :
+		options = {"api_endpoint": ENDPOINT}
+		client = aiplatform_v1.MatchServiceClient(client_options=options)
 
-
-	def store(id:str, metadata, embedding:list[TextEmbedding]) :
-		text = "Hello and thank you for all the fish";
 		embeddings = VectorDB.getEmbeddings([text])
+		datapoint = aiplatform_v1.IndexDatapoint(feature_vector=embeddings[0].values)
 
-		index_datapoint = aiplatform.gapic.IndexDatapoint(
-			deployed_index_id=INDEX,  # Important: Deployed index ID
-			datapoint_id="xx",  # Unique ID within the deployed index
-			embedding=embedding,
-			metadata={"text": text},
+		query = aiplatform_v1.FindNeighborsRequest.Query(
+			datapoint=datapoint,
+			neighbor_count=10
 		)
 
-		return
-
-		datapoint = aiplatform.gapic.IndexDatapoint(
+		request = aiplatform_v1.FindNeighborsRequest(
+			index_endpoint=ENDPOINT,
 			deployed_index_id=INDEX,
-			datapoint_id=id,  # Unique ID within the deployed index
-			embedding=embedding,
-			metadata=metadata,
+			queries=[query],
+			return_full_datapoint=False,
 		)
 
-		print(datapoint)
+		# Execute the request
+		response = client.find_neighbors(request=request)
 
-		#aiplatform.MatchingEngineIndex.upsert_datapoints(VectorDB.index, datapoints=[datapoint])
-		#VectorDB.index.upsert_datapoints()
-		#VectorDB.corpus = rag.create_corpus(display_name="Documents", vector_db=VectorDB.vectordb)
-		#print(VectorDB.corpus)
-		# projects/418382099622/locations/us-central1/ragCorpora/2305843009213693952
-		#rag.delete_corpus("projects/418382099622/locations/us-central1/ragCorpora/2305843009213693952")
-		#corpus = rag.create_corpus(display_name="Documents", description="")
-		#print(corpus)
+		# Handle the response
+		print(response)
+
+
+	def store(id:str, doc:Document, embeddings:list[TextEmbedding]) :
+		datapoints = []
+
+		for i in range(0,len(embeddings)) :
+			dpid = id+"[" + str(i) + "]"
+
+			datapoints.append(aiplatform_v1.IndexDatapoint(
+		   	datapoint_id=dpid,  # Unique ID for this vector
+    			feature_vector=embeddings[i].values,  # Must be a list of floats
+    			restricts=[],  # Optional metadata filters
+			))
+
+		VectorDB.index.upsert_datapoints(datapoints=datapoints)
+
 
 
 	def load(doc:Document) :
@@ -107,7 +109,7 @@ class VectorDB :
 			doc.metadata["chunk"] = i
 			id = path + "[" + str(i) + "]"
 			doc.page_content = VectorDB.concat(chunks[i])
-			VectorDB.store(id,doc.metadata,VectorDB.getEmbeddings(chunks[i]))
+			VectorDB.store(id,doc,VectorDB.getEmbeddings(chunks[i]))
 
 
 
@@ -148,12 +150,19 @@ class VectorDB :
 				chunks.append(chunk)
 				csize = 0
 				chunk = []
+				print("Do overlap")
 
 			ssize = len(sentences[s])
 			chunk.append(sentences[s])
 			csize += ssize
 
 		return(chunks)
+
+
+	def getEmbeddings(text:list[str]) :
+		model = TextEmbeddingModel.from_pretrained("textembedding-gecko-multilingual@001")
+		embedding = model.get_embeddings(text)
+		return(embedding)
 
 
 	def concat(chunks:list[str]) :

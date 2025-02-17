@@ -7,7 +7,7 @@ thread = None
 client = Client("Test")
 
 
-def prompt(client, thread) :
+def prompt(client:Client) :
 	while(True) :
 		try: text = input("Enter a query: ")
 		except EOFError : break
@@ -27,7 +27,7 @@ def prompt(client, thread) :
 
 
 def main() :
-	prompt(client, thread)
+	prompt(client)
 
 
 main()

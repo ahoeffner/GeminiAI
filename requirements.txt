@@ -1,7 +1,6 @@
 nltk
 pypdf
 vertexai
-transformers
 google-genai
 python-dotenv
 langchain-community
