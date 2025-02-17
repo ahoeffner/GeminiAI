@@ -61,7 +61,9 @@ class VectorDB :
 			queries=[embeddings[0].values]
 		)
 
-		print(response)
+		for hits in response :
+			for hit in hits :
+				print(hit.id)
 
 
 	def store(id:str, doc:Document, embeddings:list[TextEmbedding]) :
