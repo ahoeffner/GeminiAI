@@ -1,23 +1,21 @@
 import os
 from dotenv import load_dotenv
 
-from vertexai.preview import rag
-from google.cloud import aiplatform, aiplatform_v1
 from nltk.tokenize import sent_tokenize
 from langchain.schema.document import Document
+from google.cloud import aiplatform, aiplatform_v1
 from langchain_community.document_loaders import PyPDFLoader
 from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
 
-CHUNK = 3072
-INDEX = os.environ.get("INDEX")
-ENDPOINT = os.environ.get("ENDPOINT")
-
-
 class VectorDB :
+	CHUNK = 3072 		# Page size in characters
+	INDEX = None 		# The Vertext Index ID
+	ENDPOINT = None 	# The Vertext Index Endpoint ID
+
 	index:aiplatform.MatchingEngineIndex = None
-	vectordb:aiplatform.MatchingEngineIndex = None
 	endpoint:aiplatform.MatchingEngineIndexEndpoint = None
+
 
 	def create() :
 		VectorDB.index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
@@ -40,43 +38,29 @@ class VectorDB :
     		index=VectorDB.index, deployed_index_id="VectorDB"
 		)
 
-		INDEX = VectorDB.index.resource_name
-		ENDPOINT = VectorDB.endpoint.resource_name
+		VectorDB.INDEX = VectorDB.index.resource_name
+		VectorDB.ENDPOINT = VectorDB.endpoint.resource_name
 
-		print("Created VectorDB "+INDEX+" "+ENDPOINT)
+		print("Created VectorDB "+VectorDB.INDEX+" "+VectorDB.ENDPOINT)
 
 
 	def connect() :
-		INDEX = os.environ.get("INDEX")
-		ENDPOINT = os.environ.get("ENDPOINT")
-		VectorDB.index = aiplatform.MatchingEngineIndex(INDEX)
-		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(ENDPOINT)
-		VectorDB.vectordb = rag.VertexVectorSearch(ENDPOINT,"VectorDB")
+		VectorDB.INDEX = os.environ.get("INDEX")
+		VectorDB.ENDPOINT = os.environ.get("ENDPOINT")
+		VectorDB.index = aiplatform.MatchingEngineIndex(VectorDB.INDEX)
+		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(VectorDB.ENDPOINT)
 
 
 	def query(text:str) :
-		options = {"api_endpoint": ENDPOINT}
-		client = aiplatform_v1.MatchServiceClient(client_options=options)
-
-		embeddings = VectorDB.getEmbeddings([text])
-		datapoint = aiplatform_v1.IndexDatapoint(feature_vector=embeddings[0].values)
-
-		query = aiplatform_v1.FindNeighborsRequest.Query(
-			datapoint=datapoint,
-			neighbor_count=10
-		)
-
-		request = aiplatform_v1.FindNeighborsRequest(
-			index_endpoint=ENDPOINT,
-			deployed_index_id=INDEX,
-			queries=[query],
-			return_full_datapoint=False,
-		)
+		idx = "VectorDB"
+		embeddings:list[TextEmbedding] = VectorDB.getEmbeddings([text])
 
 		# Execute the request
-		response = client.find_neighbors(request=request)
+		response = VectorDB.endpoint.find_neighbors(
+			deployed_index_id=idx,
+			queries=[embeddings[0].values]
+		)
 
-		# Handle the response
 		print(response)
 
 
@@ -146,7 +130,7 @@ class VectorDB :
 		count = len(sentences)
 
 		for s in range(0,count) :
-			if (csize + len(sentences[s]) > CHUNK) :
+			if (csize + len(sentences[s]) > VectorDB.CHUNK) :
 				chunks.append(chunk)
 				csize = 0
 				chunk = []
