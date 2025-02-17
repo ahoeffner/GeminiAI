@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from google.cloud import aiplatform
 
 
-DOCUMENTS = "../documents/"
+DOCUMENTS = "../bronze/"
 
 load_dotenv()
 
@@ -21,9 +21,9 @@ def main() :
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
 	VectorDB.connect()
-	VectorDB.query("docker commands")
+	#VectorDB.query("docker commands")
 
-	#for file in os.listdir(DOCUMENTS) :
-	#	VectorDB.loadPDF(DOCUMENTS+file)
+	for file in os.listdir(DOCUMENTS) :
+		VectorDB.loadPDF(DOCUMENTS+file)
 
 main()

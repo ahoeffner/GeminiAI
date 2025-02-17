@@ -9,17 +9,22 @@ from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
 
 class VectorDB :
-	CHUNK = 3072 		# Page size in characters
-	INDEX = None 		# The Vertext Index ID
-	ENDPOINT = None 	# The Vertext Index Endpoint ID
+	CHUNK = 3072 			# Chuncked Page size in characters
+	STORE = "../gold/"	# Where to store the parsed content
 
-	index:aiplatform.MatchingEngineIndex = None
-	endpoint:aiplatform.MatchingEngineIndexEndpoint = None
+	DBNAME = "VectorDB"	# Name of the vector database/index
+
+	INDEX = None 			# The Vertext Index ID
+	ENDPOINT = None 		# The Vertext Index Endpoint ID
+
+	index:aiplatform.MatchingEngineIndex = None # The vector index
+	endpoint:aiplatform.MatchingEngineIndexEndpoint = None # The vector index endpoint
 
 
 	def create() :
+		print(f"Create index {VectorDB.DBNAME}")
 		VectorDB.index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
-			display_name="VectorDB",
+			display_name=VectorDB.DBNAME,
 			description="Vector database to hold document embeddings",
 			dimensions=768,
 			approximate_neighbors_count=10,
@@ -30,18 +35,20 @@ class VectorDB :
 			index_update_method="STREAM_UPDATE",
 		)
 
+		print(f"Create endpoint {VectorDB.DBNAME}")
 		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint.create(
- 	   	display_name="VectorDB", public_endpoint_enabled=True
+ 	   	display_name=VectorDB.DBNAME, public_endpoint_enabled=True
 		)
 
+		print(f"Deploy endpoint {VectorDB.DBNAME}")
 		VectorDB.endpoint.deploy_index(
-    		index=VectorDB.index, deployed_index_id="VectorDB"
+    		index=VectorDB.index, deployed_index_id=VectorDB.DBNAME
 		)
 
 		VectorDB.INDEX = VectorDB.index.resource_name
 		VectorDB.ENDPOINT = VectorDB.endpoint.resource_name
 
-		print("Created VectorDB "+VectorDB.INDEX+" "+VectorDB.ENDPOINT)
+		print("Created Vector Database "+VectorDB.INDEX+" "+VectorDB.ENDPOINT)
 
 
 	def connect() :
@@ -52,12 +59,11 @@ class VectorDB :
 
 
 	def query(text:str) :
-		idx = "VectorDB"
 		embeddings:list[TextEmbedding] = VectorDB.getEmbeddings([text])
 
 		# Execute the request
 		response = VectorDB.endpoint.find_neighbors(
-			deployed_index_id=idx,
+			deployed_index_id=VectorDB.DBNAME,
 			queries=[embeddings[0].values]
 		)
 
@@ -66,7 +72,7 @@ class VectorDB :
 				print(hit.id)
 
 
-	def store(id:str, doc:Document, embeddings:list[TextEmbedding]) :
+	def store(id:str, embeddings:list[TextEmbedding]) :
 		datapoints = []
 
 		for i in range(0,len(embeddings)) :
@@ -83,24 +89,26 @@ class VectorDB :
 
 
 	def load(doc:Document) :
-		print(f"Storing {doc.metadata.get("source")} bytes: {len(doc.page_content)}")
+		print(f"Storing {doc.metadata.get("source")}")
 
 		path = doc.metadata.get("source")
+		file = os.path.split(path)[1]
+
 		chunks = VectorDB.splitText(doc)
 
 		count = len(chunks)
+		doc.page_content = ""
 		doc.metadata["chunks"] = count
 
 		for i in range(0,count)	:
 			doc.metadata["chunk"] = i
-			id = path + "[" + str(i) + "]"
-			doc.page_content = VectorDB.concat(chunks[i])
-			VectorDB.store(id,doc,VectorDB.getEmbeddings(chunks[i]))
+			id = file + "[" + str(i) + "]"
+			VectorDB.save(id,VectorDB.concat(chunks[i]))
+			#VectorDB.store(id,VectorDB.getEmbeddings(chunks[i]))
 
 
 
-	def loadPDF(path) :
-		print("Loading PDF: "+path)
+	def loadPDF(path:str) :
 		loader = PyPDFLoader(path)
 		parts = loader.load()
 
@@ -136,7 +144,6 @@ class VectorDB :
 				chunks.append(chunk)
 				csize = 0
 				chunk = []
-				print("Do overlap")
 
 			ssize = len(sentences[s])
 			chunk.append(sentences[s])
@@ -160,3 +167,10 @@ class VectorDB :
 			text += chunks[i]
 
 		return(text)
+
+
+	def save(id:str, text:str) :
+		print(VectorDB.STORE+id)
+		f = open(VectorDB.STORE+id,"w")
+		f.write(text)
+		f.close()
