@@ -3,7 +3,6 @@ import sys
 import nltk
 from VectorDB import VectorDB
 from dotenv import load_dotenv
-from google.cloud import aiplatform
 
 load_dotenv()
 
@@ -16,11 +15,7 @@ def nltkModel() :
 
 
 def vectorDB() :
-	PROJECT = os.environ.get("PROJECT_ID")
-	GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
-	print(f"Setup VectorDB for project {PROJECT} in {GCREGION}")
-	
-	aiplatform.init(project=PROJECT, location=GCREGION)
+	VectorDB.setup()
 	VectorDB.create()
 
 

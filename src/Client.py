@@ -1,6 +1,7 @@
 import os
 
 from google import genai
+from VectorDB import VectorDB
 from Functions import CallOuts
 from google.cloud import aiplatform
 from google.genai.types import GenerateContentConfig, Part
@@ -17,7 +18,7 @@ class Client :
 		PROJECT = os.environ.get("PROJECT_ID")
 		GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
 
-		aiplatform.init(project=PROJECT, location=GCREGION)
+		VectorDB.setup()
 		self.client = genai.Client(vertexai=True, project=PROJECT, location=GCREGION)
 
 		self.chat = self.client.chats.create(

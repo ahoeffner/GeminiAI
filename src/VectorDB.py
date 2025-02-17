@@ -21,6 +21,12 @@ class VectorDB :
 	endpoint:aiplatform.MatchingEngineIndexEndpoint = None # The vector index endpoint
 
 
+	def setup() :
+		PROJECT = os.environ.get("PROJECT_ID")
+		GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
+		aiplatform.init(project=PROJECT, location=GCREGION)
+
+
 	def create() :
 		print(f"Create index {VectorDB.DBNAME}")
 		VectorDB.index = aiplatform.MatchingEngineIndex.create_tree_ah_index(
