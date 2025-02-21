@@ -12,7 +12,7 @@ load_dotenv()
 
 
 def main() :
-	print("Loading")
+	print("Starting")
 
 	PROJECT = os.environ.get("PROJECT_ID")
 	GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
@@ -21,9 +21,9 @@ def main() :
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
 	VectorDB.connect()
-	#VectorDB.query("docker commands")
+	VectorDB.query("docker commands")
 
-	for file in os.listdir(DOCUMENTS) :
-		VectorDB.loadPDF(DOCUMENTS+file)
+	#for file in os.listdir(DOCUMENTS) :
+	#	VectorDB.loadPDF(DOCUMENTS+file)
 
 main()

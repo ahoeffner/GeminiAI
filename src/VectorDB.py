@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 
+from collections import defaultdict
 from nltk.tokenize import sent_tokenize
 from langchain.schema.document import Document
 from google.cloud import aiplatform, aiplatform_v1
@@ -10,7 +11,7 @@ from vertexai.language_models import TextEmbeddingModel, TextEmbedding
 
 class VectorDB :
 	CHUNK = 3072 			# Chuncked Page size in characters
-	STORE = "../gold/"	# Where to store the parsed content
+	STORE = "../gold"		# Where to store the parsed content
 
 	DBNAME = "VectorDB"	# Name of the vector database/index
 
@@ -73,9 +74,38 @@ class VectorDB :
 			queries=[embeddings[0].values]
 		)
 
+		results = defaultdict(list)
+
 		for hits in response :
 			for hit in hits :
-				print(hit.id)
+				parts = hit.id.rsplit('[',2)
+				parts[1] = parts[1].rstrip(']')
+				parts[2] = parts[2].rstrip(']')
+
+				pages = results[parts[0]]
+				pages.append({"part#": int(parts[1]), "sentence#": int(parts[2])})
+
+		for doc in results :
+			results[doc].sort(key=lambda entry: (entry["part#"], entry["sentence#"]))
+
+		content = ""
+		# For now, just get each page. Later check if last sentences hit, and include next
+		for doc in results :
+			parts = list()
+
+			for page in results[doc] :
+				parts.append(page["part#"])
+
+			parts = list(set(parts))
+
+			for i in range(0,len(parts)) :
+				parts[i] = doc + "[" + str(parts[i]) + "]"
+
+			for chunk in parts :
+				content += VectorDB.read(chunk) + "\n\n"
+
+			print(content)
+			return(content)
 
 
 	def store(id:str, embeddings:list[TextEmbedding]) :
@@ -102,15 +132,22 @@ class VectorDB :
 
 		chunks = VectorDB.splitText(doc)
 
+		index = ""
 		count = len(chunks)
 		doc.page_content = ""
 		doc.metadata["chunks"] = count
 
 		for i in range(0,count)	:
+			if (i > 0) : index += "\n"
+			index += str(i) + " " + str(len(chunks[i]))
+
+		VectorDB.save(file+".inf",index)
+
+		for i in range(0,count)	:
 			doc.metadata["chunk"] = i
 			id = file + "[" + str(i) + "]"
 			VectorDB.save(id,VectorDB.concat(chunks[i]))
-			#VectorDB.store(id,VectorDB.getEmbeddings(chunks[i]))
+			VectorDB.store(id,VectorDB.getEmbeddings(chunks[i]))
 
 
 
@@ -176,7 +213,20 @@ class VectorDB :
 
 
 	def save(id:str, text:str) :
-		print(VectorDB.STORE+id)
-		f = open(VectorDB.STORE+id,"w")
+		print("write : "+VectorDB.STORE+os.sep+id)
+		f = open(VectorDB.STORE+os.sep+id,"w")
 		f.write(text)
 		f.close()
+
+
+	def read(id:str) :
+		print("read : "+VectorDB.STORE+os.sep+id)
+		f = open(VectorDB.STORE+os.sep+id,"r")
+		lines = f.readlines()
+		f.close()
+
+		content = ""
+		for i in range(0,len(lines)) :
+			content += lines[i]
+
+		return(content)
