@@ -7,7 +7,14 @@ from google.cloud import aiplatform
 from google.genai.types import GenerateContentConfig, Part
 
 
-RAG = "from the following context: {context}, answer the following question {message}"
+ROLE = '''
+Your role is to answer questions from employees solely based on information from our knowledge base.
+You will be provided with facts from this knowledge base during each session.
+You can only use this information when answering questions.
+
+Some information can be retrieved more efficiently by calling local functions.
+Make sure always to check is any local functions can be applied
+'''
 
 
 class Client :
@@ -19,6 +26,8 @@ class Client :
 		GCREGION = os.environ.get("GOOGLE_CLOUD_REGION")
 
 		VectorDB.setup()
+		VectorDB.connect()
+
 		self.client = genai.Client(vertexai=True, project=PROJECT, location=GCREGION)
 
 		self.chat = self.client.chats.create(
@@ -26,14 +35,21 @@ class Client :
 			config=GenerateContentConfig(
 			temperature=0,
 			tools=[CallOuts],
-			system_instruction="Use functions if available, otherwise just skip the tools and answer the question using a temperature of 1.0",
+			system_instruction=ROLE,
     		)
 		)
 
-	def prompt(self, message:str) -> str :
+	def prompt(self, question:str) -> str :
 		# who is obama
+		# list all docker commands
+		# is that all docker commands
 		# list the file Client.py from alex's mac
-		response = self.chat.send_message(message)
+
+		# Local knowledge base query
+		facts = VectorDB.query(question)
+
+		question = facts + "\n\n" + question
+		response = self.chat.send_message(question)
 
 		if (response.function_calls) :
 			for function_call in response.function_calls :
@@ -43,11 +59,6 @@ class Client :
 				if (name == "LocalFiles") :
 					content = Client.readFile("src/"+args["file"])
 					response = self.chat.send_message(Part.from_function_response(name=name,response={"content": content}))
-
-		else :
-			print()
-			print("Using default response")
-			response = self.chat.send_message(RAG.format(context="alex is a developer", message=message))
 
 		return(response.candidates[0].content.parts[0].text)
 

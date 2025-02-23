@@ -104,7 +104,6 @@ class VectorDB :
 			for chunk in parts :
 				content += VectorDB.read(chunk) + "\n\n"
 
-			print(content)
 			return(content)
 
 
@@ -213,14 +212,12 @@ class VectorDB :
 
 
 	def save(id:str, text:str) :
-		print("write : "+VectorDB.STORE+os.sep+id)
 		f = open(VectorDB.STORE+os.sep+id,"w")
 		f.write(text)
 		f.close()
 
 
 	def read(id:str) :
-		print("read : "+VectorDB.STORE+os.sep+id)
 		f = open(VectorDB.STORE+os.sep+id,"r")
 		lines = f.readlines()
 		f.close()
