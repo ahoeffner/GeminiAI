@@ -22,7 +22,8 @@ def main() :
 
 	VectorDB.connect()
 	#VectorDB.query("docker commands")
-	VectorDB.delete("python.pdf",7)
+	#VectorDB.delete("python.pdf",7)
+	VectorDB.status()
 
 	#for file in os.listdir(DOCUMENTS) :
 	#	VectorDB.loadPDF(DOCUMENTS+file)

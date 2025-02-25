@@ -132,6 +132,11 @@ class VectorDB :
 
 
 
+	def status() :
+		print(VectorDB.index.gca_resource.index_stats)
+
+
+
 	def load(doc:Document) :
 		print(f"Storing {doc.metadata.get("source")}")
 
