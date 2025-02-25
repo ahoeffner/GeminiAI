@@ -122,6 +122,15 @@ class VectorDB :
 		VectorDB.index.upsert_datapoints(datapoints=datapoints)
 
 
+	def delete(id:str, chunks:int) :
+		ids = []
+
+		for i in range(0,chunks) :
+			ids.append(id+"[" + str(i) + "]")
+
+		VectorDB.index.remove_datapoints(datapoint_ids=ids)
+
+
 
 	def load(doc:Document) :
 		print(f"Storing {doc.metadata.get("source")}")
@@ -218,6 +227,7 @@ class VectorDB :
 
 
 	def read(id:str) :
+		print("read "+id)
 		f = open(VectorDB.STORE+os.sep+id,"r")
 		lines = f.readlines()
 		f.close()

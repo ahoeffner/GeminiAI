@@ -21,7 +21,8 @@ def main() :
 	aiplatform.init(project=PROJECT, location=GCREGION)
 
 	VectorDB.connect()
-	VectorDB.query("docker commands")
+	#VectorDB.query("docker commands")
+	VectorDB.delete("python.pdf",7)
 
 	#for file in os.listdir(DOCUMENTS) :
 	#	VectorDB.loadPDF(DOCUMENTS+file)
