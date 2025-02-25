@@ -112,6 +112,7 @@ class VectorDB :
 
 		for i in range(0,len(embeddings)) :
 			dpid = id+"[" + str(i) + "]"
+			print("Storing "+dpid)
 
 			datapoints.append(aiplatform_v1.IndexDatapoint(
 		   	datapoint_id=dpid,  # Unique ID for this vector
