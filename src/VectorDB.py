@@ -1,5 +1,4 @@
 import os
-from dotenv import load_dotenv
 
 from collections import defaultdict
 from nltk.tokenize import sent_tokenize
@@ -65,7 +64,7 @@ class VectorDB :
 		VectorDB.endpoint = aiplatform.MatchingEngineIndexEndpoint(VectorDB.ENDPOINT)
 
 
-	def query(text:str) :
+	def query(self,text:str) :
 		embeddings:list[TextEmbedding] = VectorDB.getEmbeddings([text])
 
 		# Execute the request
